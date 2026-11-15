@@ -1,10 +1,10 @@
 // Service Worker Binar QR: cache-first, semua aset di-precache saat install.
 //
-// WAJIB naikkan CACHE_NAME (binar-v2, ...) setiap kali file di ASET berubah.
+// WAJIB naikkan CACHE_NAME (binar-v3, ...) setiap kali file di ASET berubah.
 // Cache-first tidak pernah bertanya ke jaringan untuk file yang sudah
 // tersimpan, jadi tanpa kenaikan versi pengguna yang sudah install akan
 // terus memakai file lama.
-const CACHE_NAME = 'binar-v2';
+const CACHE_NAME = 'binar-v3';
 // Origin yang sama bisa dipakai aplikasi lain (mis. GitHub Pages); hanya cache
 // berawalan ini yang boleh dihapus saat activate.
 const CACHE_PREFIX = 'binar-';
@@ -21,7 +21,7 @@ const ASET = [
   './utils.js',
   './lib/qrcode-generator.min.js',
   './lib/zxing-browser.min.js',
-  './logo/logo-binar-chatgpt.png',
+  './logo/logo-binar.png',
   './manifest.json',
   './sw.js',
   './icons/icon-192.png',
