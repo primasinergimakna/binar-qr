@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0878F9">
+  <meta name="description" content="Binar QR: Bikin dan Baca QR, Mudah Ringan Lancar. Semua proses jalan di perangkatmu.">
+  <title>Binar QR</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <button type="button" id="btn-tema" class="btn-tema" aria-pressed="false" aria-label="Aktifkan mode gelap">🌙</button>
+    <div class="brand">
+      <img id="logo" class="brand-logo" src="logo/logo-binar-chatgpt.png" alt="Logo Binar QR" height="40">
+      <h1 class="brand-name">Binar QR</h1>
+    </div>
+    <p class="tagline">Bikin dan Baca QR, Mudah Ringan Lancar</p>
+  </header>
+
+  <main class="main">
+
+    <!-- Tab -->
+    <div class="tabs" role="tablist" aria-label="Menu utama">
+      <button type="button" class="tab is-active" id="tab-buat" role="tab"
+              aria-selected="true" aria-controls="panel-buat">Buat QR</button>
+      <button type="button" class="tab" id="tab-scan" role="tab"
+              aria-selected="false" aria-controls="panel-scan" tabindex="-1">Scan</button>
+    </div>
+
+    <!-- Tab: Buat QR -->
+    <section class="panel" id="panel-buat" role="tabpanel" aria-labelledby="tab-buat">
+
+      <div class="kolom-kiri">
+        <label class="label" for="input-teks">Link atau teks</label>
+        <textarea id="input-teks" class="input" rows="5"
+                  placeholder="Tempel link atau teks di sini..."
+                  autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+        <p id="info-byte" class="info-byte" aria-live="polite">0 / 2331 byte</p>
+        <button type="button" id="btn-buat" class="btn btn-utama">Buat QR</button>
+      </div>
+
+      <div class="kolom-kanan">
+        <div id="preview-area" class="preview" aria-live="polite">
+          <p id="preview-kosong" class="preview-kosong">Tempel link atau teks di atas, lalu tekan Buat QR.</p>
+          <div id="qr-wadah" class="qr-wadah"></div>
+        </div>
+
+        <p id="nama-file" class="nama-file">Nama file: —</p>
+        <button type="button" id="btn-download" class="btn btn-utama" disabled>Download PNG</button>
+        <button type="button" id="btn-buat-baru" class="btn btn-sekunder">Buat Baru</button>
+      </div>
+    </section>
+
+    <!-- Tab: Scan -->
+    <section class="panel" id="panel-scan" role="tabpanel" aria-labelledby="tab-scan" hidden>
+      <div id="dropzone" class="dropzone">
+        <p id="dropzone-teks" class="dropzone-teks" aria-live="polite">Seret gambar ke sini, atau tekan Pilih file</p>
+        <button type="button" id="btn-pilih-file" class="btn btn-utama">Pilih file</button>
+        <input type="file" id="input-file" accept="image/*" hidden aria-label="Pilih file gambar untuk dipindai">
+      </div>
+
+      <div id="area-thumbnail" class="area-thumbnail"></div>
+
+      <p id="pesan-error" class="pesan-error" role="alert" hidden></p>
+
+      <label class="label" for="hasil-scan" id="label-hasil" hidden>Hasil scan</label>
+      <textarea id="hasil-scan" class="input hasil" rows="4" readonly hidden></textarea>
+
+
+      <div class="aksi-hasil">
+        <button type="button" id="btn-salin" class="btn btn-utama" hidden>Salin teks</button>
+        <button type="button" id="btn-buka-link" class="btn btn-utama" hidden>Buka link</button>
+        <button type="button" id="btn-hapus" class="btn btn-sekunder" hidden>Hapus / Scan gambar lain</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>Binar QR — Copyright © 2026 Prima Sinergi Makna (PRISMA).</p>
+  </footer>
+
+  <dialog id="dialog-qr" class="dialog-qr">
+    <div class="dialog-qr-isi">
+      <canvas id="dialog-qr-canvas" class="dialog-qr-canvas" role="img" aria-label="Kode QR diperbesar"></canvas>
+      <button type="button" id="btn-tutup-dialog" class="btn btn-sekunder">Tutup</button>
+    </div>
+  </dialog>
+
+  <script src="lib/qrcode-generator.min.js" defer></script>
+  <script src="utils.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="scanner.js" defer></script>
+</body>
+</html>

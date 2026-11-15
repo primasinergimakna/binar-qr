@@ -1,0 +1,316 @@
+/* styles.css — Semua tampilan Binar QR. Font sistem saja. */
+
+:root {
+  --aksen: #0878F9;
+  --aksen-gelap: #0662cc;
+  --teks: #14202e;
+  --teks-redup: #566271;
+  --garis: #d3dae3;
+  --latar: #f4f7fb;
+  --putih: #ffffff;
+  --nonaktif: #c9d0d9;
+  --error: #b3261e;
+  --error-latar: #fdecea;
+  --error-garis: #f3b8b3;
+  --radius: 10px;
+}
+
+/* Mode gelap (integrasi): aktif = hitam #111111, mati = biru-putih.
+   QR canvas tidak ikut dibalik — gambarnya tetap hitam di atas putih
+   supaya tetap bisa dipindai; logo diberi chip putih di bawah. */
+html.gelap {
+  --teks: #e8edf3;
+  --teks-redup: #9aa7b5;
+  --garis: #2c3846;
+  --latar: #111111;
+  --putih: #1a1d21;
+  --nonaktif: #3a4450;
+  --error: #ff8a80;
+  --error-latar: #3a1d1a;
+  --error-garis: #6b2d28;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--teks);
+  background: var(--latar);
+}
+
+/* Focus ring jelas untuk pemakai keyboard */
+:focus-visible {
+  outline: 3px solid var(--aksen);
+  outline-offset: 2px;
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- Header ---------- */
+.header {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 8px;
+  text-align: center;
+}
+
+/* Tombol mode gelap: kanan atas header, seperti web modern; ada di mobile dan desktop */
+.btn-tema {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--teks);
+  background: var(--putih);
+  border: 1px solid var(--garis);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.btn-tema:hover { border-color: var(--aksen); }
+
+/* Logo berlatar putih: di mode gelap diberi chip putih supaya tidak terlihat seperti kotak mentah */
+html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6px; }
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.brand-logo { height: 40px; width: auto; display: block; }
+
+.brand-name { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 700; }
+
+.tagline { margin: 4px 0 0; color: var(--teks-redup); font-size: 0.95rem; }
+
+/* ---------- Layout utama ---------- */
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+}
+
+/* ---------- Tab ---------- */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--garis);
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--teks-redup);
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.tab:hover { color: var(--teks); }
+
+.tab.is-active {
+  color: var(--teks);
+  border-bottom-color: var(--aksen);
+}
+
+/* ---------- Form ---------- */
+.label { display: block; margin-bottom: 6px; font-weight: 600; }
+
+.input {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  font: inherit;
+  font-size: 16px; /* 16px supaya iOS tidak zoom */
+  color: var(--teks);
+  background: var(--putih);
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.input:focus { border-color: var(--aksen); }
+
+.hasil { background: var(--latar); margin-top: 12px; }
+
+.info-byte { margin: 6px 0 16px; font-size: 0.875rem; color: var(--teks-redup); text-align: right; }
+.info-byte.is-over { color: var(--error); font-weight: 600; }
+
+/* ---------- Preview QR ---------- */
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 16px;
+  background: var(--putih);
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+}
+
+.preview-kosong { margin: 0; text-align: center; color: var(--teks-redup); }
+.preview-kosong.is-error { color: var(--error); font-weight: 600; }
+
+.qr-wadah { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.qr-wadah:empty { display: none; }
+.qr-wadah canvas, .qr-wadah img { max-width: 100%; height: auto; }
+.qr-canvas { width: 100%; max-width: 320px; height: auto; aspect-ratio: 1; cursor: pointer; }
+.qr-teks { margin: 0; max-width: 100%; text-align: center; font-size: 0.875rem; color: var(--teks-redup); overflow-wrap: anywhere; }
+
+.nama-file {
+  margin: 12px 0 16px;
+  font-size: 0.875rem;
+  color: var(--teks-redup);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Tombol ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+/* Teks putih di atas #0878F9: dipakai pada ukuran besar + tebal agar kontras cukup */
+.btn-utama {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--putih);
+  background: var(--aksen);
+}
+
+.btn-utama:hover { background: var(--aksen-gelap); }
+
+.btn-sekunder {
+  color: var(--teks);
+  background: var(--putih);
+  border-color: var(--garis);
+}
+
+.btn-sekunder:hover { border-color: var(--aksen); }
+
+.btn:disabled {
+  color: var(--teks-redup);
+  background: var(--nonaktif);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+/* ---------- Scan ---------- */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--putih);
+  border: 2px dashed #8d98a6;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.dropzone:hover, .dropzone.is-dragover { border-color: var(--aksen); }
+
+.dropzone-teks { margin: 0; font-size: 1.05rem; }
+
+.dropzone .btn { max-width: 220px; }
+
+.area-thumbnail { margin-top: 16px; text-align: center; }
+.area-thumbnail:empty { display: none; }
+.area-thumbnail img { max-width: min(100%, 200px); max-height: 200px; border-radius: var(--radius); border: 1px solid var(--garis); }
+
+.pesan-error {
+  margin: 16px 0 0;
+  padding: 12px;
+  color: var(--error);
+  background: var(--error-latar);
+  border: 1px solid var(--error-garis);
+  border-radius: var(--radius);
+}
+
+.aksi-hasil { display: grid; gap: 12px; margin-top: 12px; }
+.aksi-hasil:not(:has(.btn:not([hidden]))) { display: none; }
+.aksi-hasil:has(#btn-buka-link[hidden]) #btn-salin { grid-column: 1 / -1; }
+
+/* ---------- Dialog QR diperbesar ---------- */
+.dialog-qr {
+  padding: 16px;
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+  background: var(--putih);
+  color: var(--teks);
+  max-width: min(92vw, 680px);
+}
+
+.dialog-qr::backdrop { background: rgba(0, 0, 0, 0.6); }
+
+.dialog-qr-isi { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+.dialog-qr-canvas { width: 100%; max-width: 640px; height: auto; aspect-ratio: 1; }
+
+.dialog-qr .btn { max-width: 220px; }
+
+/* ---------- Footer ---------- */
+.footer {
+  padding: 16px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--teks-redup);
+}
+
+.footer p { margin: 0; }
+
+/* ---------- Desktop ---------- */
+@media (min-width: 640px) {
+  .header { padding-top: 32px; }
+  .aksi-hasil { grid-template-columns: 1fr 1fr; }
+  .aksi-hasil .btn-sekunder { grid-column: 1 / -1; }
+}
+
+/* Layout desktop (integrasi, dari gambar yang disetujui Jack): panel Buat QR
+   jadi dua kolom — kiri input + tombol Buat, kanan preview + unduh.
+   Tab tetap di atas karena tab juga mengendalikan panel Scan. */
+@media (min-width: 900px) {
+  .header { max-width: 960px; }
+  .main { max-width: 960px; }
+  .panel-buat { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
+  .kolom-kiri, .kolom-kanan { min-width: 0; }
+  .preview { min-height: 360px; }
+  .qr-canvas { max-width: 420px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

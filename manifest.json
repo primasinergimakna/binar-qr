@@ -1,0 +1,37 @@
+{
+  "id": "/binar-qr/",
+  "name": "Binar QR",
+  "short_name": "Binar QR",
+  "description": "Buat QR dari link atau teks persis seperti input, dan pindai QR/barcode dari gambar. Semua diproses di perangkat, tanpa server dan tanpa iklan. Dibuat oleh Prima Sinergi Makna (PRISMA).",
+  "lang": "id",
+  "start_url": "./",
+  "display": "standalone",
+  "theme_color": "#0878F9",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
