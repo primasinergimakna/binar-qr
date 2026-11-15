@@ -7,6 +7,7 @@
   <meta name="description" content="Binar QR: Bikin dan Baca QR, Mudah Ringan Lancar. Semua proses jalan di perangkatmu.">
   <title>Binar QR</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -60,6 +61,14 @@
         <p id="dropzone-teks" class="dropzone-teks" aria-live="polite">Seret gambar ke sini, atau tekan Pilih file</p>
         <button type="button" id="btn-pilih-file" class="btn btn-utama">Pilih file</button>
         <input type="file" id="input-file" accept="image/*" hidden aria-label="Pilih file gambar untuk dipindai">
+      </div>
+
+      <!-- Di luar dropzone: klik di dalam dropzone membuka file picker -->
+      <button type="button" id="btn-kamera" class="btn btn-sekunder btn-kamera">Buka kamera</button>
+
+      <div class="area-kamera" hidden>
+        <video id="video-kamera" class="video-kamera" playsinline muted autoplay aria-label="Pratinjau kamera"></video>
+        <button type="button" id="btn-tutup-kamera" class="btn btn-sekunder">Tutup kamera</button>
       </div>
 
       <div id="area-thumbnail" class="area-thumbnail"></div>

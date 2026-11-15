@@ -1,20 +1,25 @@
-// scanner.js — Logika scanner Binar QR (T2)
-// Scan hanya dari file gambar, semua diproses di perangkat.
-// Library ZXing dimuat malas (lazy) saat tab Scan pertama kali dibuka.
+// scanner.js — Logika scanner Binar QR
+// Scan dari file gambar atau kamera live, semua diproses di perangkat.
+// Urutan baca: jsQR dulu (QR), baru ZXing (barcode) kalau jsQR tidak menemukan apa-apa.
+// Kedua library dimuat malas (lazy) saat tab Scan pertama kali dibuka.
 // Memakai salinKeClipboard() dari utils.js.
 
 (function () {
   'use strict';
 
   // ---------- Konstanta ----------
-  var LOKASI_PUSTAKA = 'lib/zxing-browser.min.js';
+  var LOKASI_JSQR = 'lib/jsqr.min.js';
+  var LOKASI_ZXING = 'lib/zxing-browser.min.js';
   var BATAS_UKURAN = 10 * 1024 * 1024; // 10 MB
   var JEDA_LABEL_MS = 2000;
+  var BATAS_ZXING_MS = 10000; // satu percobaan decode ZXing
+  var JEDA_FRAME_MS = 300;    // jeda antar percobaan baca frame kamera
 
   var PESAN_FILE_TIDAK_VALID = 'File harus berupa gambar (PNG/JPG/WEBP) dan maksimal 10 MB.';
   var PESAN_TIDAK_TERBACA = 'Tidak ada QR/barcode yang terbaca di gambar ini. Coba gambar yang lebih jelas, lebih besar, atau tidak terpotong.';
   var PESAN_GAGAL_MUAT = 'Gagal memuat scanner. Coba muat ulang halaman.';
   var PESAN_GAMBAR_RUSAK = 'Gambar tidak bisa dibuka. Coba file gambar lain.';
+  var PESAN_KAMERA = 'Kamera tidak bisa dibuka. Periksa izin kamera di browser, lalu coba lagi — scan dari file tetap bisa dipakai.';
   var STATUS_MEMUAT = 'Memuat scanner...';
   var STATUS_MEMBACA = 'Membaca gambar...';
 
@@ -30,50 +35,72 @@
   var btnSalin = document.getElementById('btn-salin');
   var btnBukaLink = document.getElementById('btn-buka-link');
   var btnHapus = document.getElementById('btn-hapus');
+  var panelScan = document.getElementById('panel-scan');
+  var tabBuat = document.getElementById('tab-buat');
+  var btnKamera = document.getElementById('btn-kamera');
+  var areaKamera = document.querySelector('.area-kamera');
+  var video = document.getElementById('video-kamera');
+  var btnTutupKamera = document.getElementById('btn-tutup-kamera');
 
   // Teks awal diambil dari HTML supaya tidak ditulis dua kali
   var TEKS_DROPZONE_AWAL = teksDropzone.textContent;
   var LABEL_SALIN_AWAL = btnSalin.textContent;
 
   // ---------- Status (hanya di memori, tidak disimpan) ----------
-  var promisePustaka = null;   // promise pemuatan ZXing, null kalau belum / gagal
+  var promiseMuat = {};        // lokasi skrip → promise pemuatan; dihapus kalau gagal
+  var sedangMemuatAwal = false; // initScanner sedang menunggu kedua library
   var pembaca = null;          // instance BrowserMultiFormatReader
-  var hasilTerakhir = null;    // teks hasil scan persis seperti dibaca ZXing
+  var hasilTerakhir = null;    // teks hasil scan persis seperti dibaca decoder
   var urlGambar = null;        // object URL gambar yang sedang ditampilkan
-  var idProses = 0;            // penanda proses terbaru; proses lama diabaikan
+  var idProses = 0;            // penanda proses file terbaru; proses lama diabaikan
   var sedangProses = false;
   var timerLabelSalin = null;
+  // Satu-satunya pemilik status kamera: null = mati. Siapa pun yang membatalkan
+  // (tombol, tab, halaman tersembunyi, scan file) cukup memanggil hentikanKamera();
+  // kerja async yang tertunda membandingkan sesi-nya dengan ini lalu berhenti sendiri.
+  var sesiKamera = null;       // { stream, timer } selama kamera dibuka / aktif
+
+  // Satu kanvas dipakai ulang untuk jsQR (butuh piksel) dan ZXing frame kamera
+  var kanvasBaca = document.createElement('canvas');
+  var ctxBaca = null;
 
   // =====================================================================
-  // Lazy load ZXing
+  // Lazy load jsQR dan ZXing
   // =====================================================================
 
-  function pustakaSiap() {
+  function jsqrSiap() { return typeof window.jsQR === 'function'; }
+
+  function zxingSiap() {
     return !!(window.ZXing && window.ZXing.BrowserMultiFormatReader);
   }
 
-  // Muat lib/zxing-browser.min.js sekali saja. Gagal → boleh dicoba lagi nanti.
-  function muatPustaka() {
-    if (pustakaSiap()) return Promise.resolve();
-    if (promisePustaka) return promisePustaka;
+  // Muat satu skrip sekali saja. Gagal → boleh dicoba lagi nanti.
+  function muatSkrip(lokasi, siap) {
+    if (siap()) return Promise.resolve();
+    if (promiseMuat[lokasi]) return promiseMuat[lokasi];
 
-    promisePustaka = new Promise(function (selesai, gagal) {
+    var p = new Promise(function (selesai, gagal) {
       var s = document.createElement('script');
-      s.src = LOKASI_PUSTAKA;
+      s.src = lokasi;
       s.onload = function () {
-        if (pustakaSiap()) selesai();
-        else gagal(new Error('ZXing tidak ditemukan'));
+        if (siap()) selesai();
+        else gagal(new Error('Global library tidak ditemukan: ' + lokasi));
       };
       s.onerror = function () {
         if (s.parentNode) s.parentNode.removeChild(s);
-        gagal(new Error('Gagal memuat ZXing'));
+        gagal(new Error('Gagal memuat ' + lokasi));
       };
       document.head.appendChild(s);
     });
 
-    promisePustaka.catch(function () { promisePustaka = null; });
-    return promisePustaka;
+    promiseMuat[lokasi] = p;
+    p.catch(function () { promiseMuat[lokasi] = null; });
+    return p;
   }
+
+  function muatJsQR() { return muatSkrip(LOKASI_JSQR, jsqrSiap); }
+  function muatZXing() { return muatSkrip(LOKASI_ZXING, zxingSiap); }
+  function muatKeduanya() { return Promise.all([muatJsQR(), muatZXing()]); }
 
   // ZXing 0.23.0 memanggil console.warn setiap kali salah satu reader gagal
   // (NotFoundException bukan turunan ReaderException di library itu), padahal
@@ -107,6 +134,70 @@
     petunjuk.set(Z.DecodeHintType.TRY_HARDER, true);
     pembaca = new Z.BrowserMultiFormatReader(petunjuk);
     return pembaca;
+  }
+
+  // =====================================================================
+  // Decode
+  // =====================================================================
+
+  // Gambar ke kanvas bersama dan kembalikan pikselnya. Latar putih dulu: piksel
+  // transparan di PNG akan terbaca hitam oleh jsQR dan menenggelamkan QR-nya.
+  function ambilPiksel(sumber, lebar, tinggi) {
+    if (!ctxBaca) ctxBaca = kanvasBaca.getContext('2d', { willReadFrequently: true });
+    if (kanvasBaca.width !== lebar) kanvasBaca.width = lebar;
+    if (kanvasBaca.height !== tinggi) kanvasBaca.height = tinggi;
+    ctxBaca.fillStyle = '#ffffff';
+    ctxBaca.fillRect(0, 0, lebar, tinggi);
+    ctxBaca.drawImage(sumber, 0, 0, lebar, tinggi);
+    return ctxBaca.getImageData(0, 0, lebar, tinggi);
+  }
+
+  // jsQR: null kalau tidak ada QR (atau kanvas gagal, mis. gambar terlalu besar
+  // untuk memori — lanjut saja ke ZXing).
+  function dekodeJsQR(sumber, lebar, tinggi) {
+    try {
+      var piksel = ambilPiksel(sumber, lebar, tinggi);
+      // jsQR menerima array piksel (.data), bukan objek ImageData-nya
+      var hasil = window.jsQR(piksel.data, piksel.width, piksel.height,
+        { inversionAttempts: 'attemptBoth' });
+      return hasil && hasil.data ? hasil.data : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Semua decode ZXing lewat sini. Timer hanya bisa memutus decode yang menunggu
+  // secara async; decode yang berjalan sinkron di main thread tidak bisa dipotong
+  // dari sini (batas library, bukan kelalaian) — yang dijamin: promise ini selalu selesai.
+  // Lewat batas → ditolak, pemanggil menganggapnya "tidak terbaca".
+  function dekodeZXing(kerja) {
+    return new Promise(function (selesai, gagal) {
+      var timer = setTimeout(function () {
+        gagal(new Error('Decode ZXing melewati batas waktu'));
+      }, BATAS_ZXING_MS);
+      Promise.resolve().then(kerja).then(
+        function (hasil) { clearTimeout(timer); selesai(hasil.getText()); },
+        function (e) { clearTimeout(timer); gagal(e); }
+      );
+    });
+  }
+
+  // ZXing dari kanvas bersama (frame yang sama dengan yang baru dibaca jsQR).
+  // BrowserMultiFormatReader tidak punya decode-dari-kanvas; urutan binarizer
+  // sama dengan decode() bawaannya: Hybrid dulu, Global Histogram sebagai cadangan.
+  function dekodeKanvasZXing() {
+    var Z = window.ZXing;
+    var sumber = new Z.HTMLCanvasElementLuminanceSource(kanvasBaca, false);
+    var galat = null;
+    var binarizer = [Z.HybridBinarizer, Z.GlobalHistogramBinarizer];
+    for (var i = 0; i < binarizer.length; i++) {
+      try {
+        return ambilPembaca().decodeBitmap(new Z.BinaryBitmap(new binarizer[i](sumber)));
+      } catch (e) {
+        galat = e;
+      }
+    }
+    throw galat;
   }
 
   // =====================================================================
@@ -152,7 +243,7 @@
     }
   }
 
-  // Kembali ke keadaan kosong awal
+  // Kembali ke keadaan kosong awal (kamera tidak disentuh; lihat hentikanKamera)
   function resetSemua() {
     idProses++; // batalkan proses yang masih jalan
     sedangProses = false;
@@ -182,7 +273,7 @@
   }
 
   // =====================================================================
-  // Validasi dan proses
+  // Validasi dan proses file
   // =====================================================================
 
   function adalahLink(teks) {
@@ -204,6 +295,7 @@
   }
 
   async function prosesFile(file) {
+    hentikanKamera(); // satu scan aktif: scan file menghentikan kamera
     var id = ++idProses;
     bersihkanGambar();
     sembunyikanHasil();
@@ -237,10 +329,10 @@
     }
     if (id !== idProses) return;
 
-    // Pastikan ZXing sudah termuat (kalau belum, tunggu)
-    if (!pustakaSiap()) setStatus(STATUS_MEMUAT);
+    // Tahap 1: jsQR untuk QR (tunggu kalau belum termuat)
+    if (!jsqrSiap()) setStatus(STATUS_MEMUAT);
     try {
-      await muatPustaka();
+      await muatJsQR();
     } catch (e) {
       if (id !== idProses) return;
       sedangProses = false;
@@ -251,14 +343,32 @@
     if (id !== idProses) return;
     setStatus(STATUS_MEMBACA);
 
-    var teks = null;
-    try {
-      var hasil = await ambilPembaca().decodeFromImageElement(img);
-      teks = hasil.getText();
-    } catch (e) {
-      teks = null; // tidak ada kode terbaca
+    var teks = dekodeJsQR(img, img.naturalWidth, img.naturalHeight);
+
+    // Tahap 2: ZXing untuk barcode, hanya kalau jsQR tidak menemukan apa-apa
+    if (!teks) {
+      if (!zxingSiap()) setStatus(STATUS_MEMUAT);
+      try {
+        await muatZXing();
+      } catch (e) {
+        if (id !== idProses) return;
+        sedangProses = false;
+        pulihkanDropzone();
+        tampilkanGagal(PESAN_GAGAL_MUAT);
+        return;
+      }
+      if (id !== idProses) return;
+      setStatus(STATUS_MEMBACA);
+
+      try {
+        teks = await dekodeZXing(function () {
+          return ambilPembaca().decodeFromImageElement(img);
+        });
+      } catch (e) {
+        teks = null; // tidak ada kode terbaca, atau melewati batas waktu
+      }
+      if (id !== idProses) return;
     }
-    if (id !== idProses) return;
 
     sedangProses = false;
     pulihkanDropzone();
@@ -273,22 +383,131 @@
   }
 
   // =====================================================================
+  // Kamera live
+  // =====================================================================
+
+  function hentikanStream(stream) {
+    stream.getTracks().forEach(function (t) { t.stop(); });
+  }
+
+  // Satu-satunya jalan mematikan kamera. Aman dipanggil kapan saja, berulang kali.
+  function hentikanKamera() {
+    if (!sesiKamera) return;
+    var sesi = sesiKamera;
+    sesiKamera = null; // dulu: kerja async yang tertunda melihat sesinya sudah bukan yang aktif
+    clearTimeout(sesi.timer);
+    if (sesi.stream) hentikanStream(sesi.stream);
+    video.srcObject = null;
+    areaKamera.hidden = true;
+    btnKamera.hidden = false;
+  }
+
+  // Baca satu frame: jsQR dulu, ZXing di frame yang sama kalau kosong.
+  async function bacaFrame() {
+    // Frame belum tersedia (stream baru mulai): lewati, putaran berikut mencoba lagi
+    if (video.readyState < 2 || !video.videoWidth) return null;
+    var teks = dekodeJsQR(video, video.videoWidth, video.videoHeight);
+    if (teks) return teks;
+    try {
+      return await dekodeZXing(() => dekodeKanvasZXing());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Putaran berikutnya baru dijadwalkan setelah decode sebelumnya selesai, jadi
+  // tidak pernah ada dua decode bersamaan (tidak memakai setInterval).
+  async function putaranKamera(sesi) {
+    if (sesiKamera !== sesi) return;
+    var teks = await bacaFrame();
+    if (sesiKamera !== sesi) return;
+    if (teks) {
+      hentikanKamera();
+      tampilkanHasil(teks);
+      return;
+    }
+    sesi.timer = setTimeout(function () { putaranKamera(sesi); }, JEDA_FRAME_MS);
+  }
+
+  async function mulaiKamera() {
+    if (sesiKamera) return; // sudah membuka / aktif
+    resetSemua(); // satu scan aktif: membuka kamera mengosongkan hasil file
+
+    var sesi = { stream: null, timer: null };
+    sesiKamera = sesi;
+
+    try {
+      await muatKeduanya();
+    } catch (e) {
+      if (sesiKamera === sesi) {
+        sesiKamera = null;
+        tampilkanError(PESAN_GAGAL_MUAT);
+      }
+      return;
+    }
+    if (sesiKamera !== sesi) return;
+
+    var stream;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia tidak tersedia');
+      }
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+    } catch (e) {
+      if (sesiKamera === sesi) {
+        sesiKamera = null;
+        tampilkanError(PESAN_KAMERA);
+      }
+      return;
+    }
+    // Dibatalkan selagi menunggu izin: stream yang baru datang tidak boleh dibiarkan hidup
+    if (sesiKamera !== sesi) {
+      hentikanStream(stream);
+      return;
+    }
+
+    sesi.stream = stream;
+    video.srcObject = stream;
+    areaKamera.hidden = false;
+    btnKamera.hidden = true;
+
+    try {
+      await video.play();
+    } catch (e) {
+      if (sesiKamera === sesi) {
+        hentikanKamera();
+        tampilkanError(PESAN_KAMERA);
+      }
+      return;
+    }
+    if (sesiKamera !== sesi) return;
+
+    putaranKamera(sesi);
+  }
+
+  // =====================================================================
   // Init: dipanggil app.js saat tab Scan dibuka
   // =====================================================================
 
   function initScanner() {
-    if (pustakaSiap() || promisePustaka) return;
+    if ((jsqrSiap() && zxingSiap()) || sedangMemuatAwal) return;
 
+    sedangMemuatAwal = true;
     setStatus(STATUS_MEMUAT);
     btnPilih.disabled = true;
-    muatPustaka().then(function () {
+    muatKeduanya().then(function () {
+      sedangMemuatAwal = false;
       btnPilih.disabled = false;
-      if (!sedangProses) pulihkanDropzone();
+      if (!sedangProses) setStatus(TEKS_DROPZONE_AWAL);
     }, function () {
+      sedangMemuatAwal = false;
       btnPilih.disabled = false;
       if (!sedangProses) {
-        pulihkanDropzone();
-        tampilkanError(PESAN_GAGAL_MUAT);
+        setStatus(TEKS_DROPZONE_AWAL);
+        if (hasilTerakhir === null) tampilkanError(PESAN_GAGAL_MUAT);
       }
     });
   }
@@ -330,7 +549,7 @@
     if (e.dataTransfer) terimaFile(e.dataTransfer.files);
   });
 
-  // Salin teks hasil scan (teks asli dari ZXing, bukan dari kotak teks)
+  // Salin teks hasil scan (teks asli dari decoder, bukan dari kotak teks)
   btnSalin.addEventListener('click', async function () {
     if (hasilTerakhir === null) return;
     var berhasil = await salinKeClipboard(hasilTerakhir);
@@ -351,5 +570,22 @@
   btnHapus.addEventListener('click', function () {
     resetSemua();
     btnPilih.focus(); // tombol Hapus tersembunyi, pindahkan fokus ke Pilih file
+  });
+
+  // ----- Kamera -----
+  btnKamera.addEventListener('click', mulaiKamera);
+  btnTutupKamera.addEventListener('click', hentikanKamera);
+
+  // app.js tidak boleh diubah, jadi kamera dimatikan dari sini. Klik tab Buat QR
+  // saja tidak cukup: perpindahan tab lewat keyboard bisa memanggil pilihTab()
+  // tanpa klik, maka panel Scan yang tersembunyi diawasi juga.
+  tabBuat.addEventListener('click', hentikanKamera);
+  new MutationObserver(function () {
+    if (panelScan.hidden) hentikanKamera();
+  }).observe(panelScan, { attributes: true, attributeFilter: ['hidden'] });
+
+  // Halaman disembunyikan (ganti aplikasi, kunci layar): lepas kamera
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) hentikanKamera();
   });
 })();

@@ -6,7 +6,7 @@
 // WAJIB naikkan CACHE_NAME (binar-1.1, binar-1.2, ...) setiap kali file di ASET berubah.
 // Kalau isi sw.js tidak berubah, browser tidak memasang SW baru — dan tanpa
 // SW baru, cache lama tidak pernah dibersihkan.
-const CACHE_NAME = 'binar-1.1';
+const CACHE_NAME = 'binar-1.3';
 // Origin yang sama bisa dipakai aplikasi lain (mis. GitHub Pages); hanya cache
 // berawalan ini yang boleh dihapus saat activate.
 const CACHE_PREFIX = 'binar-';
@@ -23,11 +23,13 @@ const ASET = [
   './utils.js',
   './lib/qrcode-generator.min.js',
   './lib/zxing-browser.min.js',
+  './lib/jsqr.min.js',
   './logo/logo-binar.png',
   './manifest.json',
   './sw.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/favicon-32.png',
 ];
 
 self.addEventListener('install', (event) => {
