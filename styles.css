@@ -305,7 +305,7 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
 @media (min-width: 900px) {
   .header { max-width: 960px; }
   .main { max-width: 960px; }
-  .panel-buat { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
+  #panel-buat { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
   .kolom-kiri, .kolom-kanan { min-width: 0; }
   .preview { min-height: 360px; }
   .qr-canvas { max-width: 420px; }

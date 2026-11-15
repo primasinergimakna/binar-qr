@@ -1,10 +1,10 @@
 // Service Worker Binar QR: cache-first, semua aset di-precache saat install.
 //
-// WAJIB naikkan CACHE_NAME (binar-v3, ...) setiap kali file di ASET berubah.
+// WAJIB naikkan CACHE_NAME (binar-v4, ...) setiap kali file di ASET berubah.
 // Cache-first tidak pernah bertanya ke jaringan untuk file yang sudah
 // tersimpan, jadi tanpa kenaikan versi pengguna yang sudah install akan
 // terus memakai file lama.
-const CACHE_NAME = 'binar-v3';
+const CACHE_NAME = 'binar-v4';
 // Origin yang sama bisa dipakai aplikasi lain (mis. GitHub Pages); hanya cache
 // berawalan ini yang boleh dihapus saat activate.
 const CACHE_PREFIX = 'binar-';
