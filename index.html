@@ -13,12 +13,11 @@
 <body>
 
   <header class="header">
-    <button type="button" id="btn-tema" class="btn-tema" aria-pressed="false" aria-label="Aktifkan mode gelap">🌙</button>
     <div class="brand">
       <img id="logo" class="brand-logo" src="logo/logo-binar.png" alt="Logo Binar QR" height="40">
       <h1 class="brand-name">Binar QR</h1>
     </div>
-    <p class="tagline">Bikin dan Baca QR, Mudah Ringan Lancar</p>
+    <p class="tagline"><span class="tagline-aksi">Bikin dan Baca QR,</span> <span class="tagline-pemisah" aria-hidden="true">|</span> <span class="tagline-janji">Mudah Ringan Lancar</span></p>
   </header>
 
   <main class="main">
@@ -41,17 +40,21 @@
                   autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
         <p id="info-byte" class="info-byte" aria-live="polite">0 / 2331 byte</p>
         <button type="button" id="btn-buat" class="btn btn-utama">Buat QR</button>
+
+        <!-- Aksi setelah QR dibuat: di bawah kolom ketik, bukan di kolom hasil -->
+        <div class="aksi-buat" hidden>
+          <button type="button" id="btn-download" class="btn btn-utama" disabled>Download PNG</button>
+          <button type="button" id="btn-buat-baru" class="btn btn-sekunder">Buat Baru</button>
+        </div>
       </div>
 
-      <div class="kolom-kanan">
+      <div class="kolom-kanan" hidden>
         <div id="preview-area" class="preview" aria-live="polite">
           <p id="preview-kosong" class="preview-kosong">Tempel link atau teks di atas, lalu tekan Buat QR.</p>
           <div id="qr-wadah" class="qr-wadah"></div>
         </div>
 
         <p id="nama-file" class="nama-file">Nama file: —</p>
-        <button type="button" id="btn-download" class="btn btn-utama" disabled>Download PNG</button>
-        <button type="button" id="btn-buat-baru" class="btn btn-sekunder">Buat Baru</button>
       </div>
     </section>
 
@@ -76,20 +79,21 @@
       <p id="pesan-error" class="pesan-error" role="alert" hidden></p>
 
       <label class="label" for="hasil-scan" id="label-hasil" hidden>Hasil scan</label>
-      <textarea id="hasil-scan" class="input hasil" rows="4" readonly hidden></textarea>
+      <textarea id="hasil-scan" class="input hasil" rows="1" readonly hidden></textarea>
 
 
       <div class="aksi-hasil">
         <button type="button" id="btn-salin" class="btn btn-utama" hidden>Salin teks</button>
         <button type="button" id="btn-buka-link" class="btn btn-utama" hidden>Buka link</button>
-        <button type="button" id="btn-hapus" class="btn btn-sekunder" hidden>Hapus / Scan gambar lain</button>
+        <button type="button" id="btn-hapus" class="btn btn-sekunder" hidden>Scan lagi</button>
       </div>
     </section>
 
   </main>
 
   <footer class="footer">
-    <p>Binar QR — Copyright © 2026 Prima Sinergi Makna (PRISMA).</p>
+    <p>Binar QR v1.1</p>
+    <p>© 2026 Prima Sinergi Makna (PRISMA).</p>
   </footer>
 
   <dialog id="dialog-qr" class="dialog-qr">

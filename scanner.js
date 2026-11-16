@@ -59,6 +59,12 @@
   // (tombol, tab, halaman tersembunyi, scan file) cukup memanggil hentikanKamera();
   // kerja async yang tertunda membandingkan sesi-nya dengan ini lalu berhenti sendiri.
   var sesiKamera = null;       // { stream, timer } selama kamera dibuka / aktif
+  // true dari saat hasil/kegagalan scan tampil sampai "Scan lagi". Bersama sesiKamera,
+  // inilah satu-satunya bahan keputusan tampilnya tombol Buka kamera.
+  var scanSelesai = false;
+  // field-sizing: content (CSS) mengatur tinggi kotak hasil; JS hanya mengisi kekosongan
+  // di peramban yang belum mendukungnya (mis. Safari sebelum 26.2).
+  var FIELD_SIZING_ADA = !!(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'));
 
   // Satu kanvas dipakai ulang untuk jsQR (butuh piksel) dan ZXing frame kamera
   var kanvasBaca = document.createElement('canvas');
@@ -223,9 +229,30 @@
     pesanError.hidden = true;
   }
 
+  // Pemilik tunggal tampilnya tombol Buka kamera: tampil hanya di keadaan awal,
+  // yaitu tidak ada kamera yang sedang menampilkan stream dan tidak ada scan yang selesai.
+  function perbaruiTombolKamera() {
+    var kameraTampil = !!(sesiKamera && sesiKamera.stream);
+    btnKamera.hidden = kameraTampil || scanSelesai;
+  }
+
+  // Cadangan tinggi kotak hasil tanpa field-sizing. Batas maksimum (4 baris) tetap
+  // milik CSS (max-block-size), jadi di sini cukup ukur isi penuhnya. Kotak yang
+  // sedang tidak terlihat (tab lain) tidak bisa diukur — dilewati, diukur lagi saat tampil.
+  function sesuaikanKotakHasil() {
+    if (FIELD_SIZING_ADA || kotakHasil.hidden || !kotakHasil.clientWidth) return;
+    kotakHasil.style.height = 'auto';
+    var gaya = getComputedStyle(kotakHasil);
+    var garis = parseFloat(gaya.borderTopWidth) + parseFloat(gaya.borderBottomWidth);
+    kotakHasil.style.height = (kotakHasil.scrollHeight + garis) + 'px';
+  }
+
   function sembunyikanHasil() {
     hasilTerakhir = null;
+    scanSelesai = false;
+    perbaruiTombolKamera();
     kotakHasil.value = '';
+    kotakHasil.style.height = '';
     kotakHasil.hidden = true;
     labelHasil.hidden = true;
     btnSalin.hidden = true;
@@ -264,12 +291,17 @@
     btnHapus.hidden = false;
     sembunyikanError();
     dropzone.hidden = true;
+    scanSelesai = true;
+    perbaruiTombolKamera();
+    sesuaikanKotakHasil(); // setelah kotak terlihat; tinggi tidak bisa diukur saat hidden
   }
 
   function tampilkanGagal(pesan) {
     tampilkanError(pesan);
     dropzone.hidden = true;
     btnHapus.hidden = false;
+    scanSelesai = true;
+    perbaruiTombolKamera();
   }
 
   // =====================================================================
@@ -399,7 +431,7 @@
     if (sesi.stream) hentikanStream(sesi.stream);
     video.srcObject = null;
     areaKamera.hidden = true;
-    btnKamera.hidden = false;
+    perbaruiTombolKamera();
   }
 
   // Baca satu frame: jsQR dulu, ZXing di frame yang sama kalau kosong.
@@ -472,7 +504,7 @@
     sesi.stream = stream;
     video.srcObject = stream;
     areaKamera.hidden = false;
-    btnKamera.hidden = true;
+    perbaruiTombolKamera();
 
     try {
       await video.play();
@@ -568,8 +600,8 @@
   });
 
   btnHapus.addEventListener('click', function () {
-    resetSemua();
-    btnPilih.focus(); // tombol Hapus tersembunyi, pindahkan fokus ke Pilih file
+    resetSemua(); // kembali ke tampilan awal Scan, termasuk tombol Buka kamera
+    btnPilih.focus(); // tombol Scan lagi tersembunyi, pindahkan fokus ke Pilih file
   });
 
   // ----- Kamera -----
@@ -582,7 +614,11 @@
   tabBuat.addEventListener('click', hentikanKamera);
   new MutationObserver(function () {
     if (panelScan.hidden) hentikanKamera();
+    else sesuaikanKotakHasil(); // lebar bisa berubah selagi tab lain terbuka
   }).observe(panelScan, { attributes: true, attributeFilter: ['hidden'] });
+
+  // Lebar berubah (putar layar) → pembungkusan baris berubah → tinggi diukur ulang
+  window.addEventListener('resize', sesuaikanKotakHasil);
 
   // Halaman disembunyikan (ganti aplikasi, kunci layar): lepas kamera
   document.addEventListener('visibilitychange', function () {

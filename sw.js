@@ -6,7 +6,7 @@
 // WAJIB naikkan CACHE_NAME (binar-1.1, binar-1.2, ...) setiap kali file di ASET berubah.
 // Kalau isi sw.js tidak berubah, browser tidak memasang SW baru — dan tanpa
 // SW baru, cache lama tidak pernah dibersihkan.
-const CACHE_NAME = 'binar-1.3';
+const CACHE_NAME = 'binar-1.4';
 // Origin yang sama bisa dipakai aplikasi lain (mis. GitHub Pages); hanya cache
 // berawalan ini yang boleh dihapus saat activate.
 const CACHE_PREFIX = 'binar-';

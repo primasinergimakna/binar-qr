@@ -13,21 +13,9 @@
   --error-latar: #fdecea;
   --error-garis: #f3b8b3;
   --radius: 10px;
-}
-
-/* Mode gelap (integrasi): aktif = hitam #111111, mati = biru-putih.
-   QR canvas tidak ikut dibalik — gambarnya tetap hitam di atas putih
-   supaya tetap bisa dipindai; logo diberi chip putih di bawah. */
-html.gelap {
-  --teks: #e8edf3;
-  --teks-redup: #9aa7b5;
-  --garis: #2c3846;
-  --latar: #111111;
-  --putih: #1a1d21;
-  --nonaktif: #3a4450;
-  --error: #ff8a80;
-  --error-latar: #3a1d1a;
-  --error-garis: #6b2d28;
+  --pad-input: 12px;
+  /* Tinggi footer tetap: .main memakainya untuk jarak bawah, jadi dua angka ini tidak bisa berselisih */
+  --tinggi-footer: 3.5rem;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -64,29 +52,6 @@ body {
   text-align: center;
 }
 
-/* Tombol mode gelap: kanan atas header, seperti web modern; ada di mobile dan desktop */
-.btn-tema {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 1.25rem;
-  line-height: 1;
-  color: var(--teks);
-  background: var(--putih);
-  border: 1px solid var(--garis);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.btn-tema:hover { border-color: var(--aksen); }
-
-/* Logo berlatar putih: di mode gelap diberi chip putih supaya tidak terlihat seperti kotak mentah */
-html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6px; }
-
 .brand {
   display: flex;
   align-items: center;
@@ -94,11 +59,14 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
   gap: 10px;
 }
 
-.brand-logo { height: 40px; width: auto; display: block; }
+.brand-logo { height: 40px; width: auto; display: block; border-radius: 10px; }
 
 .brand-name { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 700; }
 
-.tagline { margin: 4px 0 0; color: var(--teks-redup); font-size: 0.95rem; }
+/* Dua warna, tanpa garis bawah: aksi dan pemisah biru, janji warna teks */
+.tagline { margin: 4px 0 0; font-size: 0.95rem; text-decoration: none; }
+.tagline-aksi, .tagline-pemisah { color: var(--aksen); text-decoration: none; }
+.tagline-janji { color: var(--teks); text-decoration: none; }
 
 /* ---------- Layout utama ---------- */
 .main {
@@ -106,7 +74,8 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding: 8px 16px 24px;
+  /* Jarak bawah = tinggi footer tetap + napas, supaya tombol terbawah tidak tertutup */
+  padding: 8px 16px calc(var(--tinggi-footer) + 24px);
 }
 
 /* ---------- Tab ---------- */
@@ -137,6 +106,9 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
   border-bottom-color: var(--aksen);
 }
 
+/* Panel Buat QR: kolom bertumpuk di mobile dengan jarak (di desktop jadi grid, lihat bawah) */
+#panel-buat { display: flex; flex-direction: column; gap: 16px; }
+
 /* ---------- Form ---------- */
 .label { display: block; margin-bottom: 6px; font-weight: 600; }
 
@@ -144,7 +116,7 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
   display: block;
   width: 100%;
   min-height: 120px;
-  padding: 12px;
+  padding: var(--pad-input);
   font: inherit;
   font-size: 16px; /* 16px supaya iOS tidak zoom */
   color: var(--teks);
@@ -156,7 +128,19 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
 
 .input:focus { border-color: var(--aksen); }
 
-.hasil { background: var(--latar); margin-top: 12px; }
+/* Kotak hasil mengikuti isi: 1 baris untuk hasil pendek, maks 4 baris lalu scroll.
+   field-sizing: content (pola katalog) mengurus tingginya; peramban yang belum
+   mendukung dilayani scanner.js. Batas 4 baris = 4lh + padding atas-bawah + border 2px
+   (border-box). min-height 120px milik .input dicabut di sini. */
+.hasil {
+  background: var(--latar);
+  margin-top: 12px;
+  min-height: 0;
+  height: auto;
+  resize: none;
+  field-sizing: content;
+  max-block-size: calc(4lh + 2 * var(--pad-input) + 2px);
+}
 
 .info-byte { margin: 6px 0 16px; font-size: 0.875rem; color: var(--teks-redup); text-align: right; }
 .info-byte.is-over { color: var(--error); font-weight: 600; }
@@ -183,11 +167,16 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
 .qr-teks { margin: 0; max-width: 100%; text-align: center; font-size: 0.875rem; color: var(--teks-redup); overflow-wrap: anywhere; }
 
 .nama-file {
-  margin: 12px 0 16px;
+  margin: 12px 0 0;
   font-size: 0.875rem;
   color: var(--teks-redup);
   overflow-wrap: anywhere;
 }
+
+/* Download + Buat Baru di bawah kolom ketik. Jarak atas hanya kalau Buat QR
+   (yang menempel di atasnya) sedang tampil; di keadaan hasil, jarak dari info byte sudah cukup. */
+.aksi-buat { display: grid; gap: 12px; }
+#btn-buat:not([hidden]) + .aksi-buat { margin-top: 12px; }
 
 /* ---------- Tombol ---------- */
 .btn {
@@ -299,11 +288,22 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
 .dialog-qr .btn { max-width: 220px; }
 
 /* ---------- Footer ---------- */
+/* Menempel di bawah layar; latar sama dengan halaman supaya isi yang lewat di belakangnya tertutup rapi */
 .footer {
-  padding: 16px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: var(--tinggi-footer);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
   text-align: center;
   font-size: 0.8125rem;
   color: var(--teks-redup);
+  background: var(--latar);
 }
 
 .footer p { margin: 0; }
@@ -316,15 +316,33 @@ html.gelap .brand-logo { background: #ffffff; border-radius: 8px; padding: 4px 6
 }
 
 /* Layout desktop (integrasi, dari gambar yang disetujui Jack): panel Buat QR
-   jadi dua kolom — kiri input + tombol Buat, kanan preview + unduh.
-   Tab tetap di atas karena tab juga mengendalikan panel Scan. */
+   jadi dua kolom — kiri input + tombol (Buat, atau Download + Buat Baru setelah
+   berhasil), kanan preview QR + nama file. Tab tetap di atas karena tab juga
+   mengendalikan panel Scan. */
 @media (min-width: 900px) {
   .header { max-width: 960px; }
   .main { max-width: 960px; }
   #panel-buat { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
   .kolom-kiri, .kolom-kanan { min-width: 0; }
   .preview { min-height: 360px; }
-  .qr-canvas { max-width: 420px; }
+  /* .qr-wadah di depan: tanpa itu .qr-wadah canvas { max-width: 100% } menang
+     dan batas 420px tidak pernah berlaku (QR melebar penuh di kolom hasil) */
+  .qr-wadah .qr-canvas { max-width: 420px; }
+}
+
+/* Layar sempit (di bawah 900px), keadaan hasil: kolom ketik DISEMBUNYIKAN (label, textarea,
+   penghitung byte, Buat QR); yang tampil hanya QR + teks + nama file, lalu Download + Buat Baru
+   tepat di bawahnya. Mengetik lagi lewat Buat Baru. Di desktop kolom ketik tetap terlihat.
+   Download + Buat Baru ada di .kolom-kiri secara DOM, jadi urutannya dibalik dengan order
+   (kolom hasil dulu). Urutan Tab mengikuti DOM, bukan tampilan. */
+@media (max-width: 899px) {
+  #panel-buat.mode-hasil .kolom-kanan { order: 1; }
+  #panel-buat.mode-hasil .kolom-kiri { order: 2; }
+  #panel-buat.mode-hasil .label,
+  #panel-buat.mode-hasil #input-teks,
+  #panel-buat.mode-hasil .info-byte,
+  #panel-buat.mode-hasil #btn-buat { display: none; }
+  #panel-buat.mode-hasil .aksi-buat { margin-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
